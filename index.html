@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydraulic Press Simulator - Pascal's Law Demo</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Hydraulic Press Simulator</h1>
+        <p>Pascal's Law Interactive Demo</p>
+    </header>
+
+    <main class="container">
+        <!-- Controls Panel -->
+        <section class="glass-panel controls-section">
+            <h2>Controls</h2>
+
+            <!-- F1 Slider -->
+            <div class="control-group">
+                <div class="label-row">
+                    <label for="f1-slider">Input Force (F₁)</label>
+                    <span id="f1-val" class="value-display">200 N</span>
+                </div>
+                <input type="range" id="f1-slider" min="0" max="500" value="200" step="1">
+            </div>
+
+            <!-- A1 Slider -->
+            <div class="control-group">
+                <div class="label-row">
+                    <label for="a1-slider">Input Piston Area (A₁)</label>
+                    <span id="a1-val" class="value-display">5 cm²</span>
+                </div>
+                <input type="range" id="a1-slider" min="1" max="20" value="5" step="0.5">
+            </div>
+
+            <!-- A2 Slider -->
+            <div class="control-group">
+                <div class="label-row">
+                    <label for="a2-slider">Output Piston Area (A₂)</label>
+                    <span id="a2-val" class="value-display">100 cm²</span>
+                </div>
+                <input type="range" id="a2-slider" min="10" max="200" value="100" step="5">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-group">
+                <button id="btn-pump" class="btn btn-primary" aria-label="Increase force">Pump (+Force)</button>
+                <button id="btn-release" class="btn" aria-label="Release force">Release</button>
+            </div>
+
+            <div class="btn-group">
+                <button id="btn-reset" class="btn btn-danger" aria-label="Reset simulation">Reset All</button>
+            </div>
+
+            <!-- Realistic Mode Toggle -->
+            <div class="toggle-row">
+                <span>Realistic Damping</span>
+                <label class="switch">
+                    <input type="checkbox" id="realistic-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- Math Section -->
+            <h2>Physics Calculation</h2>
+            <div class="math-panel">
+                <div class="formula">
+                    P = F₁ / A₁ &nbsp;|&nbsp; F₂ = P × A₂
+                </div>
+
+                <div class="math-line">
+                    <span>Input Force (F₁)</span>
+                    <span id="math-f1">200 N</span>
+                </div>
+                <div class="math-line">
+                    <span>Area Ratio (A₂/A₁)</span>
+                    <span id="math-ratio">20.0 x</span>
+                </div>
+                <div class="math-line">
+                    <span>Pressure (P)</span>
+                    <span id="math-p" class="result-value">400.0 <span class="unit">kPa</span></span>
+                </div>
+                <div class="math-line">
+                    <span>Output Force (F₂)</span>
+                    <span id="math-f2" class="result-value">4000 N</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visualization Panel -->
+        <section class="glass-panel simulation-wrapper">
+            <div class="pressure-gauge">
+                <span class="gauge-label">System Pressure</span>
+                <span id="gauge-display" class="gauge-value">400 kPa</span>
+            </div>
+
+            <div class="viz-container">
+                <svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" id="sim-svg">
+                    <defs>
+                        <!-- Gradients and Filters -->
+                        <linearGradient id="pistonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#696868c1;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#8e8c8ce2;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#696868c1;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="fluidGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.9" />
+                            <stop offset="100%" style="stop-color:#2563eb;stop-opacity:0.95" />
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                            <feMerge>
+                                <feMergeNode in="coloredBlur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+                    <!-- Base Platform (Ground) -->
+                    <rect x="50" y="450" width="700" height="10" fill="#475569" rx="2" />
+
+                    <!-- PIPE CONNECTING CYLINDERS -->
+                    <!-- This sits behind cylinders visually -->
+                    <path class="cylinder-wall" d="M 230 400 L 550 400" stroke-width="20" stroke="#334155" />
+                    <!-- Fluid in pipe -->
+                    <rect x="230" y="392" width="320" height="16" fill="url(#fluidGradient)" class="fluid-pipe" />
+
+                    <!-- LEFT CYLINDER (INPUT) -->
+                    <g id="cyl-left" transform="translate(100, 150)">
+                        <!-- Cylinder Body -->
+                        <rect x="0" y="0" width="130" height="250" fill="rgba(255,255,255,0.05)" stroke="#64748b"
+                            stroke-width="2" />
+
+                        <!-- Fluid Column -->
+                        <rect id="fluid-left" x="5" y="100" width="120" height="150" fill="url(#fluidGradient)" />
+
+                        <!-- Piston Group -->
+                        <g id="piston-left" transform="translate(5, 100)">
+                            <rect x="0" y="-120" width="120" height="120" fill="url(#pistonGradient)"
+                                stroke="#475569" />
+                            <text x="60" y="-60" text-anchor="middle" fill="#334155" font-size="14"
+                                font-weight="bold">Input</text>
+
+                            <!-- Arrow Force Indicator -->
+                            <path d="M 60 -140 L 60 -180" stroke="#c0ffee" stroke-width="4"
+                                marker-end="url(#arrowhead)" />
+                            <polygon points="60,-130 50,-145 70,-145" fill="#c0ffee" />
+                        </g>
+
+                        <text x="65" y="270" text-anchor="middle" fill="#94a3b8" font-size="12">Area: A₁</text>
+                    </g>
+
+                    <!-- RIGHT CYLINDER (OUTPUT) -->
+                    <g id="cyl-right" transform="translate(550, 150)">
+                        <!-- Cylinder Body (Wider) -->
+                        <rect id="cyl-right-body" x="-100" y="0" width="200" height="250" fill="rgba(255,255,255,0.05)"
+                            stroke="#64748b" stroke-width="2" />
+
+                        <!-- Fluid Column -->
+                        <rect id="fluid-right" x="-95" y="150" width="190" height="100" fill="url(#fluidGradient)" />
+
+                        <!-- Piston Group -->
+                        <g id="piston-right" transform="translate(-95, 150)">
+                            <rect id="piston-right-head" x="0" y="-20" width="190" height="20"
+                                fill="url(#pistonGradient)" stroke="#475569" />
+                            <rect id="piston-right-rod" x="85" y="0" width="20" height="100" fill="#94a3b8" />
+                            <!-- Hidden rod inside fluid effectively -->
+                            <!-- Re-drawing rod upwards -->
+                            <rect x="75" y="-140" width="40" height="120" fill="url(#pistonGradient)" />
+
+                            <!-- Platform on top -->
+                            <rect x="0" y="-150" width="190" height="10" fill="#cbd5e1" stroke="#475569" />
+                        </g>
+
+                        <!-- Crush Object (Stationary Top Plate at y=-100 relative to g group, or fixed in world needs calculation) -->
+                        <!-- Actually object sits on piston, crushes against a Ceiling -->
+
+                        <!-- Ceiling Plate -->
+                        <!-- <rect x="-110" y="-50" width="220" height="20" fill="#334155" /> -->
+
+                        <!-- Object to Crush -->
+
+
+                        <text x="0" y="270" text-anchor="middle" fill="#94a3b8" font-size="12">Area: A₂</text>
+                    </g>
+
+                    <!-- Crush Text Overlay -->
+                    <text id="crush-msg" x="550" y="100" class="crush-text">CRUSHED!</text>
+
+                </svg>
+            </div>
+
+            <div
+                style="padding-top: 1rem; font-size: 0.8rem; color: var(--text-muted); display:flex; justify-content:space-between;">
+                <span>Simulating Pascal's Law Principle</span>
+                <span id="warning-msg" style="color: #fca5a5; opacity: 0;">⚠ Warning: A₁ ≥ A₂ (No Advantage)</span>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        Made for Mechanical Simulation Demo • &copy; Chidambaram 2025
+    </footer>
+
+    <!-- External JS -->
+    <script src="index.js"></script>
+</body>
+
+</html>
